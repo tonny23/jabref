@@ -73,68 +73,25 @@ public class ExportAction {
             }
 
             private void export(Path file, FileChooser.ExtensionFilter selectedExtensionFilter, List<Exporter> exporters) {
-                String selectedExtension = selectedExtensionFilter.getExtensions().get(0).replace("*", "");
-                if (!file.endsWith(selectedExtension)) {
-                    FileUtil.addExtension(file, selectedExtension);
-                }
+                        ExporterUtil.exporter(file,selectedExtensionFilter,exporters,selectedOnly,frame);
+                final List<BibEntry> finEntries = ExporterUtil.getEntries();
 
-                final Exporter format = FileFilterConverter.getExporter(selectedExtensionFilter, exporters).orElseThrow(() -> new IllegalStateException("User didn't selected a file type for the extension"));
-                List<BibEntry> entries;
-                if (selectedOnly) {
-                    // Selected entries
-                    entries = frame.getCurrentBasePanel().getSelectedEntries();
-                } else {
-                    // All entries
-                    entries = frame.getCurrentBasePanel().getDatabase().getEntries();
-                }
-
-                // Set the global variable for this database's file directory before exporting,
-                // so formatters can resolve linked files correctly.
-                // (This is an ugly hack!)
-                Globals.prefs.fileDirForDatabase = frame.getCurrentBasePanel()
-                        .getBibDatabaseContext()
-                        .getFileDirectories(Globals.prefs.getFileDirectoryPreferences());
-
-                // Make sure we remember which filter was used, to set
-                // the default for next time:
-                Globals.prefs.put(JabRefPreferences.LAST_USED_EXPORT, format.getName());
-                Globals.prefs.put(JabRefPreferences.EXPORT_WORKING_DIRECTORY, file.getParent().toString());
-
-                final List<BibEntry> finEntries = entries;
                 AbstractWorker exportWorker = new AbstractWorker() {
-
-                    String errorMessage;
 
                     @Override
                     public void run() {
-                        try {
-                            format.export(frame.getCurrentBasePanel().getBibDatabaseContext(),
-                                    file,
-                                    frame.getCurrentBasePanel()
-                                            .getBibDatabaseContext()
-                                            .getMetaData()
-                                            .getEncoding()
-                                            .orElse(Globals.prefs.getDefaultEncoding()),
-                                    finEntries);
-                        } catch (Exception ex) {
-                            LOGGER.warn("Problem exporting", ex);
-                            if (ex.getMessage() == null) {
-                                errorMessage = ex.toString();
-                            } else {
-                                errorMessage = ex.getMessage();
-                            }
-                        }
+                        ExporterUtil.exporterRun(frame,file,finEntries,LOGGER);
                     }
 
                     @Override
                     public void update() {
                         // No error message. Report success:
-                        if (errorMessage == null) {
-                            frame.output(Localization.lang("%0 export successful", format.getName()));
+                        if (ExporterUtil.getErrorMessage() == null) {
+                            frame.output(Localization.lang("%0 export successful", ExporterUtil.getFormat().getName()));
                         }
                         // ... or show an error dialog:
                         else {
-                            frame.output(Localization.lang("Could not save file.") + " - " + errorMessage);
+                            frame.output(Localization.lang("Could not save file.") + " - " + ExporterUtil.getErrorMessage());
                             // Need to warn the user that saving failed!
                             // FIXME: This should be JavaFX
                             /*

@@ -31,48 +31,24 @@ public class IEEE implements FulltextFetcher {
     private static final Pattern PDF_PATTERN = Pattern.compile("\"(https://ieeexplore.ieee.org/ielx[0-9/]+\\.pdf[^\"]+)\"");
     private static final String IEEE_DOI = "10.1109";
     private static final String BASE_URL = "https://ieeexplore.ieee.org";
+    private String stampString = "";
+
 
     @Override
     public Optional<URL> findFullText(BibEntry entry) throws IOException {
         Objects.requireNonNull(entry);
 
-        String stampString = "";
-
         // Try URL first -- will primarily work for entries from the old IEEE search
         Optional<String> urlString = entry.getField(FieldName.URL);
         if (urlString.isPresent()) {
-
-            Matcher documentUrlMatcher = DOCUMENT_PATTERN.matcher(urlString.get());
-            if (documentUrlMatcher.find()) {
-                String docId = documentUrlMatcher.group(1);
-                stampString = STAMP_BASE_STRING_DOCUMENT + docId;
-            }
-
-            //You get this url if you export bibtex from IEEE
-            Matcher stampMatcher = STAMP_PATTERN.matcher(urlString.get());
-            if (stampMatcher.find()) {
-                // Found it
-                stampString = stampMatcher.group(1);
-            }
-
+            stampString = getUrl(urlString);
         }
 
         // If not, try DOI
         if (stampString.isEmpty()) {
             Optional<DOI> doi = entry.getField(FieldName.DOI).flatMap(DOI::parse);
             if (doi.isPresent() && doi.get().getDOI().startsWith(IEEE_DOI) && doi.get().getExternalURI().isPresent()) {
-                // Download the HTML page from IEEE
-                URLDownload urlDownload = new URLDownload(doi.get().getExternalURI().get().toURL());
-                //We don't need to modify the cookies, but we need support for them
-                urlDownload.getCookieFromUrl();
-
-                String resolvedDOIPage = urlDownload.asString();
-                // Try to find the link
-                Matcher matcher = STAMP_PATTERN.matcher(resolvedDOIPage);
-                if (matcher.find()) {
-                    // Found it
-                    stampString = matcher.group(1);
-                }
+                stampString = getUrlFromDoi(doi);
             }
         }
 
@@ -95,6 +71,37 @@ public class IEEE implements FulltextFetcher {
             return Optional.of(new URL(matcher.group(1)));
         }
         return Optional.empty();
+    }
+
+    public String getUrl(Optional<String> urlString) {
+        // Try URL first -- will primarily work for entries from the old IEEE search
+        Matcher documentUrlMatcher = DOCUMENT_PATTERN.matcher(urlString.get());
+        if (documentUrlMatcher.find()) {
+            String docId = documentUrlMatcher.group(1);
+            stampString = STAMP_BASE_STRING_DOCUMENT + docId;
+        }
+        //You get this url if you export bibtex from IEEE
+        Matcher stampMatcher = STAMP_PATTERN.matcher(urlString.get());
+        if (stampMatcher.find()) {
+            // Found it
+            stampString = stampMatcher.group(1);
+        }
+        return stampString;
+    }
+
+    public String getUrlFromDoi(Optional<DOI> doi) throws IOException {
+        // Download the HTML page from IEEE
+        URLDownload urlDownload = new URLDownload(doi.get().getExternalURI().get().toURL());
+        //We don't need to modify the cookies, but we need support for them
+        urlDownload.getCookieFromUrl();
+        String resolvedDOIPage = urlDownload.asString();
+        // Try to find the link
+        Matcher matcher = STAMP_PATTERN.matcher(resolvedDOIPage);
+        if (matcher.find()) {
+            // Found it
+            stampString = matcher.group(1);
+        }
+        return stampString;
     }
 
     @Override

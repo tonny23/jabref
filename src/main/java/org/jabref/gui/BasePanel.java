@@ -350,91 +350,9 @@ public class BasePanel extends StackPane implements ClipboardOwner {
 
         actions.put(Actions.SELECT_ALL, (BaseAction) mainTable.getSelectionModel()::selectAll);
 
-        // The action for opening the string editor
-        actions.put(Actions.EDIT_STRINGS, (BaseAction) () -> {
-            if (stringDialog == null) {
-                StringDialog form = new StringDialog(frame, BasePanel.this, bibDatabaseContext.getDatabase());
-                form.setVisible(true);
-                stringDialog = form;
-            } else {
-                stringDialog.setVisible(true);
-            }
-        });
+        setActionOpenStringEditor();
 
-        // The action for auto-generating keys.
-        actions.put(Actions.MAKE_KEY, new AbstractWorker() {
-
-            List<BibEntry> entries;
-            int numSelected;
-            boolean canceled;
-
-            // Run first, in EDT:
-            @Override
-            public void init() {
-                entries = getSelectedEntries();
-                numSelected = entries.size();
-
-                if (entries.isEmpty()) { // None selected. Inform the user to select entries first.
-                    dialogService.showWarningDialogAndWait(Localization.lang("Autogenerate BibTeX keys"),
-                                                           Localization.lang("First select the entries you want keys to be generated for."));
-                    return;
-                }
-                output(formatOutputMessage(Localization.lang("Generating BibTeX key for"), numSelected));
-            }
-
-            // Run second, on a different thread:
-            @Override
-            public void run() {
-                // We don't want to generate keys for entries which already have one thus remove the entries
-                if (Globals.prefs.getBoolean(JabRefPreferences.AVOID_OVERWRITING_KEY)) {
-                    entries.removeIf(BibEntry::hasCiteKey);
-
-                    // if we're going to override some cite keys warn the user about it
-                } else if (Globals.prefs.getBoolean(JabRefPreferences.WARN_BEFORE_OVERWRITING_KEY)) {
-                    if (entries.parallelStream().anyMatch(BibEntry::hasCiteKey)) {
-
-                        boolean overwriteKeysPressed = dialogService.showConfirmationDialogWithOptOutAndWait(
-                                                                                                             Localization.lang("Overwrite keys"),
-                                                                                                             Localization.lang("One or more keys will be overwritten. Continue?"),
-                                                                                                             Localization.lang("Overwrite keys"),
-                                                                                                             Localization.lang("Cancel"),
-                                                                                                             Localization.lang("Disable this confirmation dialog"),
-                                                                                                             optOut -> Globals.prefs.putBoolean(JabRefPreferences.WARN_BEFORE_OVERWRITING_KEY, !optOut));
-
-                        // The user doesn't want to overide cite keys
-                        if (!overwriteKeysPressed) {
-                            canceled = true;
-                            return;
-                        }
-                    }
-                }
-
-                // generate the new cite keys for each entry
-                final NamedCompound ce = new NamedCompound(Localization.lang("Autogenerate BibTeX keys"));
-                BibtexKeyGenerator keyGenerator = new BibtexKeyGenerator(bibDatabaseContext, Globals.prefs.getBibtexKeyPatternPreferences());
-                for (BibEntry entry : entries) {
-                    Optional<FieldChange> change = keyGenerator.generateAndSetKey(entry);
-                    change.ifPresent(fieldChange -> ce.addEdit(new UndoableKeyChange(fieldChange)));
-                }
-                ce.end();
-
-                // register the undo event only if new cite keys were generated
-                if (ce.hasEdits()) {
-                    getUndoManager().addEdit(ce);
-                }
-            }
-
-            // Run third, on EDT:
-            @Override
-            public void update() {
-                if (canceled) {
-                    return;
-                }
-                markBaseChanged();
-                numSelected = entries.size();
-                output(formatOutputMessage(Localization.lang("Generated BibTeX key for"), numSelected));
-            }
-        });
+        setActionGenerateAutoKeys();
 
         // The action for cleaning up entry.
         actions.put(Actions.CLEANUP, cleanUpAction);
@@ -469,16 +387,7 @@ public class BasePanel extends StackPane implements ClipboardOwner {
 
         actions.put(Actions.OPEN_EXTERNAL_FILE, (BaseAction) () -> openExternalFile());
 
-        actions.put(Actions.OPEN_FOLDER, (BaseAction) () -> JabRefExecutorService.INSTANCE.execute(() -> {
-            final List<Path> files = FileUtil.getListOfLinkedFiles(mainTable.getSelectedEntries(), bibDatabaseContext.getFileDirectoriesAsPaths(Globals.prefs.getFileDirectoryPreferences()));
-            for (final Path f : files) {
-                try {
-                    JabRefDesktop.openFolderAndSelectFile(f.toAbsolutePath());
-                } catch (IOException e) {
-                    LOGGER.info("Could not open folder", e);
-                }
-            }
-        }));
+        setActionOpenFolder();
 
         actions.put(Actions.OPEN_CONSOLE, (BaseAction) () -> JabRefDesktop
                                                                           .openConsole(frame.getCurrentBasePanel().getBibDatabaseContext().getDatabaseFile().orElse(null)));
@@ -492,32 +401,7 @@ public class BasePanel extends StackPane implements ClipboardOwner {
 
         actions.put(Actions.MERGE_WITH_FETCHED_ENTRY, new MergeWithFetchedEntryAction(this, frame.getDialogService()));
 
-        actions.put(Actions.REPLACE_ALL, (BaseAction) () -> {
-            final ReplaceStringDialog rsd = new ReplaceStringDialog(frame);
-            rsd.setVisible(true);
-            if (!rsd.okPressed()) {
-                return;
-            }
-            int counter = 0;
-            final NamedCompound ce = new NamedCompound(Localization.lang("Replace string"));
-            if (rsd.selOnly()) {
-                for (BibEntry be : mainTable.getSelectedEntries()) {
-                    counter += rsd.replace(be, ce);
-                }
-            } else {
-                for (BibEntry entry : bibDatabaseContext.getDatabase().getEntries()) {
-                    counter += rsd.replace(entry, ce);
-                }
-            }
-
-            output(Localization.lang("Replaced") + ' ' + counter + ' '
-                    + (counter == 1 ? Localization.lang("occurrence") : Localization.lang("occurrences")) + '.');
-            if (counter > 0) {
-                ce.end();
-                getUndoManager().addEdit(ce);
-                markBaseChanged();
-            }
-        });
+        setActionReplaceAll();
 
         actions.put(new SpecialFieldValueViewModel(SpecialField.RELEVANCE.getValues().get(0)).getCommand(),
                     new SpecialFieldViewModel(SpecialField.RELEVANCE, undoManager).getSpecialFieldAction(SpecialField.RELEVANCE.getValues().get(0), frame));
@@ -575,6 +459,147 @@ public class BasePanel extends StackPane implements ClipboardOwner {
         actions.put(Actions.MOVE_TO_GROUP, new GroupAddRemoveDialog(this, true, true));
 
         actions.put(Actions.DOWNLOAD_FULL_TEXT, new FindFullTextAction(frame.getDialogService(), this));
+    }
+
+    private void setActionReplaceAll() {
+        actions.put(Actions.REPLACE_ALL, (BaseAction) () -> {
+            final ReplaceStringDialog rsd = new ReplaceStringDialog(frame);
+            rsd.setVisible(true);
+            if (!rsd.okPressed()) {
+                return;
+            }
+            int counter = 0;
+            final NamedCompound ce = new NamedCompound(Localization.lang("Replace string"));
+            if (rsd.selOnly()) {
+                for (BibEntry be : mainTable.getSelectedEntries()) {
+                    counter += rsd.replace(be, ce);
+                }
+            } else {
+                for (BibEntry entry : bibDatabaseContext.getDatabase().getEntries()) {
+                    counter += rsd.replace(entry, ce);
+                }
+            }
+
+            output(Localization.lang("Replaced") + ' ' + counter + ' '
+                    + (counter == 1 ? Localization.lang("occurrence") : Localization.lang("occurrences")) + '.');
+            if (counter > 0) {
+                ce.end();
+                getUndoManager().addEdit(ce);
+                markBaseChanged();
+            }
+        });
+    }
+
+    /**
+     * Set action open folder
+     */
+    private void setActionOpenFolder() {
+        actions.put(Actions.OPEN_FOLDER, (BaseAction) () -> JabRefExecutorService.INSTANCE.execute(() -> {
+            final List<Path> files = FileUtil.getListOfLinkedFiles(mainTable.getSelectedEntries(), bibDatabaseContext.getFileDirectoriesAsPaths(Globals.prefs.getFileDirectoryPreferences()));
+            for (final Path f : files) {
+                try {
+                    JabRefDesktop.openFolderAndSelectFile(f.toAbsolutePath());
+                } catch (IOException e) {
+                    LOGGER.info("Could not open folder", e);
+                }
+            }
+        }));
+    }
+
+    /**
+     * opening the string editor
+     */
+    private void setActionOpenStringEditor() {
+        // The action for opening the string editor
+        actions.put(Actions.EDIT_STRINGS, (BaseAction) () -> {
+            if (stringDialog == null) {
+                StringDialog form = new StringDialog(frame, BasePanel.this, bibDatabaseContext.getDatabase());
+                form.setVisible(true);
+                stringDialog = form;
+            } else {
+                stringDialog.setVisible(true);
+            }
+        });
+    }
+
+    /**
+     * Auto generate keys
+     */
+    private void setActionGenerateAutoKeys() {
+        // The action for auto-generating keys.
+        actions.put(Actions.MAKE_KEY, new AbstractWorker() {
+
+            List<BibEntry> entries;
+            int numSelected;
+            boolean canceled;
+
+            // Run first, in EDT:
+            @Override
+            public void init() {
+                entries = getSelectedEntries();
+                numSelected = entries.size();
+
+                if (entries.isEmpty()) { // None selected. Inform the user to select entries first.
+                    dialogService.showWarningDialogAndWait(Localization.lang("Autogenerate BibTeX keys"),
+                            Localization.lang("First select the entries you want keys to be generated for."));
+                    return;
+                }
+                output(formatOutputMessage(Localization.lang("Generating BibTeX key for"), numSelected));
+            }
+
+            // Run second, on a different thread:
+            @Override
+            public void run() {
+                // We don't want to generate keys for entries which already have one thus remove the entries
+                if (Globals.prefs.getBoolean(JabRefPreferences.AVOID_OVERWRITING_KEY)) {
+                    entries.removeIf(BibEntry::hasCiteKey);
+
+                    // if we're going to override some cite keys warn the user about it
+                } else if (Globals.prefs.getBoolean(JabRefPreferences.WARN_BEFORE_OVERWRITING_KEY)) {
+                    if (entries.parallelStream().anyMatch(BibEntry::hasCiteKey)) {
+
+                        boolean overwriteKeysPressed = dialogService.showConfirmationDialogWithOptOutAndWait(
+                                Localization.lang("Overwrite keys"),
+                                Localization.lang("One or more keys will be overwritten. Continue?"),
+                                Localization.lang("Overwrite keys"),
+                                Localization.lang("Cancel"),
+                                Localization.lang("Disable this confirmation dialog"),
+                                optOut -> Globals.prefs.putBoolean(JabRefPreferences.WARN_BEFORE_OVERWRITING_KEY, !optOut));
+
+                        // The user doesn't want to overide cite keys
+                        if (!overwriteKeysPressed) {
+                            canceled = true;
+                            return;
+                        }
+                    }
+                }
+
+                // generate the new cite keys for each entry
+                final NamedCompound ce = new NamedCompound(Localization.lang("Autogenerate BibTeX keys"));
+                BibtexKeyGenerator keyGenerator = new BibtexKeyGenerator(bibDatabaseContext, Globals.prefs.getBibtexKeyPatternPreferences());
+                for (BibEntry entry : entries) {
+                    Optional<FieldChange> change = keyGenerator.generateAndSetKey(entry);
+                    change.ifPresent(fieldChange -> ce.addEdit(new UndoableKeyChange(fieldChange)));
+                }
+                ce.end();
+
+                // register the undo event only if new cite keys were generated
+                if (ce.hasEdits()) {
+                    getUndoManager().addEdit(ce);
+                }
+            }
+
+            // Run third, on EDT:
+            @Override
+            public void update() {
+                if (canceled) {
+                    return;
+                }
+                markBaseChanged();
+                numSelected = entries.size();
+                output(formatOutputMessage(Localization.lang("Generated BibTeX key for"), numSelected));
+            }
+        });
     }
 
     /**
