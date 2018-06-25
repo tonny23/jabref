@@ -3,6 +3,7 @@ package org.jabref.ASV;
 import org.jabref.logic.importer.ImportFormatPreferences;
 import org.jabref.logic.importer.fileformat.FreeCiteImporter;
 import org.jabref.model.entry.BibEntry;
+import org.jabref.testutils.category.FetcherTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
+@FetcherTest
 public class FreeCiteImporterTest {
 
     private FreeCiteImporter importer;

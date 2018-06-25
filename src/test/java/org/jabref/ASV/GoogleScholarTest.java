@@ -7,6 +7,7 @@ import org.jabref.logic.importer.fetcher.GoogleScholar;
 import org.jabref.logic.net.URLDownload;
 import org.jabref.model.entry.BibEntry;
 import org.jabref.model.entry.FieldName;
+import org.jabref.testutils.category.FetcherTest;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@FetcherTest
 public class GoogleScholarTest {
 
     private GoogleScholar finder;
