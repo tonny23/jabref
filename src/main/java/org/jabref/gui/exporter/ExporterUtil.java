@@ -1,9 +1,9 @@
 package org.jabref.gui.exporter;
 
-import javafx.stage.FileChooser;
-
 import java.nio.file.Path;
 import java.util.List;
+
+import javafx.stage.FileChooser;
 
 import org.jabref.Globals;
 import org.jabref.gui.JabRefFrame;

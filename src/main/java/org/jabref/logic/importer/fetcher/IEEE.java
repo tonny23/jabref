@@ -33,7 +33,6 @@ public class IEEE implements FulltextFetcher {
     private static final String BASE_URL = "https://ieeexplore.ieee.org";
     private String stampString = "";
 
-
     @Override
     public Optional<URL> findFullText(BibEntry entry) throws IOException {
         Objects.requireNonNull(entry);
