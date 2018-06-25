@@ -13,14 +13,13 @@ import java.nio.file.Path;
 import java.util.List;
 import org.slf4j.Logger;
 
-
 public class ExporterUtil {
     private static Exporter format;
     private static List<BibEntry> entries;
     private static String errorMessage;
 
     public static void exporter(Path file, FileChooser.ExtensionFilter selectedExtensionFilter, List<Exporter> exporters,
-                         boolean selectedOnly, JabRefFrame frame){
+                         boolean selectedOnly, JabRefFrame frame) {
         String selectedExtension = selectedExtensionFilter.getExtensions().get(0).replace("*", "");
         if (!file.endsWith(selectedExtension)) {
             FileUtil.addExtension(file, selectedExtension);
@@ -46,7 +45,7 @@ public class ExporterUtil {
         Globals.prefs.put(JabRefPreferences.EXPORT_WORKING_DIRECTORY, file.getParent().toString());
     }
 
-    public static void exporterRun(JabRefFrame frame,Path file,List<BibEntry> finEntries, Logger LOGGER){
+    public static void exporterRun(JabRefFrame frame,Path file,List<BibEntry> finEntries, Logger LOGGER) {
         try {
             ExporterUtil.getFormat().export(frame.getCurrentBasePanel().getBibDatabaseContext(),
                     file,
@@ -62,19 +61,19 @@ public class ExporterUtil {
         }
     }
 
-    public static Exporter getFormat(){
+    public static Exporter getFormat() {
         return format;
     }
 
-    public static List getEntries(){
+    public static List getEntries() {
         return entries;
     }
 
-    private static void setErrorMessage(String message){
+    private static void setErrorMessage(String message) {
         errorMessage = message;
     }
 
-    public static String getErrorMessage(){
+    public static String getErrorMessage() {
         return errorMessage;
     }
 }

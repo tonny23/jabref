@@ -20,7 +20,6 @@ import org.jabref.gui.util.FileFilterConverter;
 import org.jabref.gui.worker.AbstractWorker;
 import org.jabref.logic.exporter.Exporter;
 import org.jabref.logic.l10n.Localization;
-import org.jabref.logic.util.io.FileUtil;
 import org.jabref.model.entry.BibEntry;
 import org.jabref.preferences.JabRefPreferences;
 

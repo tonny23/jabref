@@ -21,27 +21,27 @@ public class JabRefCLI {
     private final CommandLine cl;
     private List<String> leftOver;
 
-    private static final String PREXP = "prexp";
-    private static final String PRIMP = "primp";
-    private static final String FILE = "FILE";
-    private static final String PRDEF = "prdef";
-    private static final String PREFS_XML = "jabref_prefs.xml";
-    private static final String HELP = "help";
-    private static final String FIELD = "field";
-    private static final String VERSION = "version";
-    private static final String BLANK = "blank";
-    private static final String LOADS = "loads";
-    private static final String NO_GUI = "nogui";
-    private static final String OUTPUT = "output";
-    private static final String IMPORT_BIBTEX = "importBibtex";
-    private static final String IMPORT = "import";
-    private static final String AUX = "aux";
-    private static final String IMPORT_TO_OPEN = "importToOpen";
-    private static final String DEBUG = "debug";
-    private static final String FETCH = "fetch";
-    private static final String EXPORT_MATCHES = "exportMatches";
-    private static final String GENERATE_BIBTEX_KEYS = "generateBibtexKeys";
-    private static final String AUTOMATICALLY_SET_FILE_LINKS = "automaticallySetFileLinks";
+    private final static String PREXP = "prexp";
+    private final static String PRIMP = "primp";
+    private final static String FILE = "FILE";
+    private final static String PRDEF = "prdef";
+    private final static String PREFS_XML = "jabref_prefs.xml";
+    private final static String HELP = "help";
+    private final static String FIELD = "field";
+    private final static String VERSION = "version";
+    private final static String BLANK = "blank";
+    private final static String LOADS = "loads";
+    private final static String NO_GUI = "nogui";
+    private final static String OUTPUT = "output";
+    private final static String IMPORT_BIBTEX = "importBibtex";
+    private final static String IMPORT = "import";
+    private final static String AUX = "aux";
+    private final static String IMPORT_TO_OPEN = "importToOpen";
+    private final static String DEBUG = "debug";
+    private final static String FETCH = "fetch";
+    private final static String EXPORT_MATCHES = "exportMatches";
+    private final static String GENERATE_BIBTEX_KEYS = "generateBibtexKeys";
+    private final static String AUTOMATICALLY_SET_FILE_LINKS = "automaticallySetFileLinks";
 
 
     public JabRefCLI(String[] args) {
