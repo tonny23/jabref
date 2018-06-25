@@ -1,6 +1,10 @@
 package org.jabref.gui.exporter;
 
 import javafx.stage.FileChooser;
+
+import java.nio.file.Path;
+import java.util.List;
+
 import org.jabref.Globals;
 import org.jabref.gui.JabRefFrame;
 import org.jabref.gui.util.FileFilterConverter;
@@ -9,8 +13,6 @@ import org.jabref.logic.util.io.FileUtil;
 import org.jabref.model.entry.BibEntry;
 import org.jabref.preferences.JabRefPreferences;
 
-import java.nio.file.Path;
-import java.util.List;
 import org.slf4j.Logger;
 
 public class ExporterUtil {
